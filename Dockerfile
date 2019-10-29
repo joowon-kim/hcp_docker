@@ -119,6 +119,10 @@ RUN wget -q https://github.com/ecr05/MSM_HOCR/releases/download/1.0/msm_centos
 RUN mv msm_centos /usr/local/bin/msm
 RUN chmod ugo+x /usr/local/bin/msm
 
+RUN mkdir -p /home/user
+RUN chmod ugo+rwX /home/user
+ENV HOME /home/user
+
 # setup files
 ENV FSL_FIX_MCRROOT=/usr/local/MATLAB/MATLAB_Runtime
 RUN echo "export FREESURFER_HOME=/usr/local/freesurfer" >> $HOME/.bashrc
