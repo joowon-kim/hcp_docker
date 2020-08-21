@@ -1,7 +1,7 @@
 #!/bin/bash
 
 CMD_DOCKER=docker
-CONTAINER=hcp:4.2.2-rc.2
+CONTAINER=hcp_docker:4.2.2-rc.2
 
 read -p "Type the data directory [$HOME/data]: " DN_DATA_SRC
 read -p "Type the directory containing gradient coefficient files [$HOME/resource]: " DN_COEFF
