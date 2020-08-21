@@ -18,7 +18,18 @@ Other pipelines were not tested yet.
 * FSL: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki
 * Freesurfer: https://surfer.nmr.mgh.harvard.edu/fswiki/DownloadAndInstall
 
-### Installation outside docker:
+## Installation
+### pull docker image
+```
+docker pull joowon/hcp_docker:4.2.2-rc.2
+```
+
+### or, build docker image
+```
+docker build -t hcp_docker:4.2.2-rc2 .
+```
+
+## Installation outside docker:
 Run `create_hcp_docker.sh` to download programs that will be stored outside a container.
 
 * Freesurfer 6.0.1 (https://surfer.nmr.mgh.harvard.edu)
@@ -28,11 +39,5 @@ Run `create_hcp_docker.sh` to download programs that will be stored outside a co
 * Workbench (https://www.humanconnectome.org/software/connectome-workbench)
 * gradient coefficient file from scanner
 
-## Installation
-### build docker image
-```
-docker built -t hcp:4.2.2-rc2 .
-```
-
-### check `run_hcp.sh` file created by `create_hcp_docker.sh`
+## check `run_hcp.sh` file created by `create_hcp_docker.sh`
 
