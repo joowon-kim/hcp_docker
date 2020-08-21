@@ -1,8 +1,9 @@
 #!/bin/sh
 
-#CMD_DOCKER=nvidia-docker
 CMD_DOCKER=docker
-CONTAINER=hcp
+CONTAINER=VAR_CONTAINER
+
+BD_PGM=VAR_BD_PGM
 
 if [ $# -eq 0 ]; then
     CMD="$CONTAINER bash"
@@ -10,15 +11,15 @@ else
     CMD=$@
 fi
 
-DN_DATA_SRC=${HOME}/data
+DN_DATA_SRC=VAR_DN_DATA_SRC
 DN_DATA_DOCKER=/data
-DN_COEFF=${HOME}/resource
+DN_COEFF=VAR_DN_COEFF
 
-BD_PGM=/Users/joowon/docker/pgm
 DN_FREESURFER=${BD_PGM}/freesurfer
 DN_HCP=${BD_PGM}/HCPpipelines
 DN_FIX=${BD_PGM}/fix
 DN_WORKBENCH=${BD_PGM}/workbench
+DN_SCRIPT=${BD_PGM}/hcp_script
 
 $CMD_DOCKER run -ti --rm \
     --user $(id -u):$(id -g) \
@@ -26,7 +27,8 @@ $CMD_DOCKER run -ti --rm \
     -v ${DN_HCP}:/usr/local/HCPpipelines:ro \
     -v ${DN_FIX}:/usr/local/fix:ro \
     -v ${DN_WORKBENCH}:/usr/local/workbench:ro \
-    -v ${DN_COEFF}:/resource:ro \
+    -v ${DN_SCRIPT}:/usr/local/hcp_script:ro \
+    -v ${DN_COEFF}:/home/user/resource:ro \
     -v ${DN_DATA_SRC}:${DN_DATA_DOCKER} \
     $CMD
-
+#
