@@ -10,33 +10,35 @@
 
 
 #FROM centos:centos6.8
-FROM nvidia/cuda:7.5-devel-centos6
+#FROM nvidia/cuda:10.2-devel-centos7
+FROM nvidia/cuda:10.2-devel-centos6
 
-RUN yum update -y
-
-# for fsl, hcp, freesurfer
-RUN yum install -y wget tcsh bc
-RUN yum install -y zlib-devel bzip2-devel xz-libs unzip
-RUN yum groupinstall -y development && \
-    yum install -y openssl-devel sqlite-devel openssl
-
-# for R
-RUN yum install -y epel-release
-RUN yum install -y "@Development Tools" R R-devel
-RUN yum install -y libxml2-devel libcurl-devel
-
-# for workbench
-RUN yum install -y mesa-libGL mesa-libGLU
-
-#
-RUN yum install -y vim
-
-RUN yum clean all
+RUN yum update -y && \
+    yum install -y wget tcsh bc vim && \
+    yum groupinstall -y development && \
+    yum install -y zlib-devel bzip2-devel xz-libs unzip && \
+    yum install -y openssl-devel sqlite-devel openssl && \
+    yum install -y epel-release && \
+    yum install -y "@Development Tools" R R-devel && \
+    yum install -y libxml2-devel libcurl-devel && \
+    yum install -y mesa-libGL mesa-libGLU && \
+    yum clean all
 
 RUN mkdir -p /src
 WORKDIR /src
 
-ENV PATH=/usr/local/bin:$PATH
+# R
+RUN yum install centos-release-scl -y && \
+    yum upgrade -y && \
+    yum install -y devtoolset-6 
+
+ENV R_REMOTES_NO_ERRORS_FROM_WARNINGS=true
+ADD install_r_packages.sh /src/
+
+RUN chmod +x /src/install_r_packages.sh && \
+    echo "CXX11 = g++ -m64" >> /usr/lib64/R/etc/Makeconf && \
+    echo "CXX11FLAGS = -O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -m64 -mtune=generic" >> /usr/lib64/R/etc/Makeconf && \
+    scl enable devtoolset-6 /src/install_r_packages.sh
 
 # Python
 RUN wget -q https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tgz && \
@@ -51,83 +53,64 @@ RUN wget -q https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tgz && \
 # python pip
 RUN wget https://bootstrap.pypa.io/get-pip.py && \
     python2.7 get-pip.py && \
-    rm /src/* -rf
-
-RUN pip install -U pip && \
+    rm /src/* -rf && \
+    pip install -U pip && \
     pip install -U setuptools && \
     pip install numpy && \
     pip install scipy && \
     pip install nibabel
 
-# FSL
-RUN wget -q http://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py
-# specify version if necessary
-RUN python fslinstaller.py -d /usr/local/fsl -q
-
-# legacy FSL
-RUN mkdir -p /opt/fmrib/ && \
-    cd /opt/fmrib/ && \
-    ln -s /usr/local/fsl ./
-
 # gradient unwarp
-RUN wget -q https://github.com/Washington-University/gradunwarp/archive/v1.1.0.tar.gz
-RUN tar -zxf v1.1.0.tar.gz && \
+RUN wget -q https://github.com/Washington-University/gradunwarp/archive/v1.1.0.tar.gz && \
+    tar -zxf v1.1.0.tar.gz && \
     cd gradunwarp-1.1.0/ && \
     python setup.py install && \
     rm /src/* -rf
 
-# R
-RUN mkdir -p /usr/share/doc/R-3.5.2/html/
-RUN mkdir -p /usr/lib64/R/library/class/html/
-
-RUN echo 'install.packages("devtools", repos="http://cran.us.r-project.org")' | R --no-save
-RUN echo 'require(devtools); install_version("kernlab", version="0.9-24", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("ROCR", version="1.0-7", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("class", version="7.3-14", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("mvtnorm", version="1.0-8", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("multcomp", version="1.4-8", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("coin", version="1.2-2", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("strucchange", version="1.5-1", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("libcoin", version="1.0-5", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("matrixStats", repos="https://cran.us.r-project.org")' | R --no-save
-RUN echo 'require(devtools); install_version("party", version="1.0-25", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE, dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("e1071", version="1.6-7", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-RUN echo 'require(devtools); install_version("randomForest", version="4.6-12", repos="https://cran.us.r-project.org", upgrade_dependencies=FALSE)' | R --no-save
-
-ENV FSL_FIX_R_CMD=/usr/bin/R
 
 # Matlab runtime library
-RUN wget -q https://ssd.mathworks.com/supportfiles/downloads/R2016b/deployment_files/R2016b/installers/glnxa64/MCR_R2016b_glnxa64_installer.zip
-RUN wget -q https://ssd.mathworks.com/supportfiles/downloads/R2016b/deployment_files/R2016b/installers/glnxa64/MCR_R2016b_Update_6_glnxa64.sh
-RUN mkdir r2016b && cd r2016b && \
-    unzip ../MCR_R2016b_glnxa64_installer.zip && \
-    ./install -mode silent -agreeToLicense yes && \
-    cd .. && \
-    sh ./MCR_R2016b_Update_6_glnxa64.sh -s
+#RUN wget -q https://ssd.mathworks.com/supportfiles/downloads/R2016b/deployment_files/R2016b/installers/glnxa64/MCR_R2016b_glnxa64_installer.zip && \
+#    wget -q https://ssd.mathworks.com/supportfiles/downloads/R2016b/deployment_files/R2016b/installers/glnxa64/MCR_R2016b_Update_6_glnxa64.sh && \
+#    mkdir r2016b && cd r2016b && \
+#    unzip ../MCR_R2016b_glnxa64_installer.zip && \
+#    ./install -mode silent -agreeToLicense yes && \
+#    cd .. && \
+#    sh ./MCR_R2016b_Update_6_glnxa64.sh -s
 
-RUN wget -q https://ssd.mathworks.com/supportfiles/downloads/R2017b/deployment_files/R2017b/installers/glnxa64/MCR_R2017b_glnxa64_installer.zip
-RUN mkdir r2017b && cd r2017b && \
-    unzip ../MCR_R2017b_glnxa64_installer.zip && \
-    ./install -mode silent -agreeToLicense yes && \
-    cd ..
-
-RUN rm /src/* -rf
-RUN rm /tmp/* -rf
+#RUN wget -q https://ssd.mathworks.com/supportfiles/downloads/R2017b/deployment_files/R2017b/installers/glnxa64/MCR_R2017b_glnxa64_installer.zip && \
+#    mkdir r2017b && cd r2017b && \
+#    unzip ../MCR_R2017b_glnxa64_installer.zip && \
+#    ./install -mode silent -agreeToLicense yes && \
+#    cd ..
 
 # MSM
-RUN wget -q https://github.com/ecr05/MSM_HOCR/releases/download/1.0/msm_centos
-RUN mv msm_centos /usr/local/bin/msm
-RUN chmod ugo+x /usr/local/bin/msm
+RUN wget -q https://github.com/ecr05/MSM_HOCR/releases/download/1.0/msm_centos && \
+    mv msm_centos /usr/local/bin/msm && \
+    chmod ugo+x /usr/local/bin/msm
 
-RUN mkdir -p /home/user
-RUN chmod ugo+rwX /home/user
+RUN rm /src/*  /tmp/* -rf
+
+# FSL
+#RUN wget -q http://fsl.fmrib.ox.ac.uk/fsldownloads/fslinstaller.py && \
+#    python fslinstaller.py -d /usr/local/fsl -q && \
+RUN mkdir -p /opt/fmrib/ && \
+    cd /opt/fmrib/ && \
+    ln -s /usr/local/fsl ./ && \
+    cd /usr/local && \
+    ln -s /mnt/local/usr/fsl-6.0.3_centos6 fsl
+
+RUN mkdir -p /home/user && \
+    chmod ugo+rwX /home/user
+
 ENV HOME /home/user
+ENV PATH=/usr/local/bin:$PATH
+ENV FSL_FIX_R_CMD=/usr/bin/R
 
 # setup files
 ENV FSL_FIX_MCRROOT=/usr/local/MATLAB/MATLAB_Runtime
-RUN echo "export FREESURFER_HOME=/usr/local/freesurfer" >> $HOME/.bashrc
-RUN echo 'source $FREESURFER_HOME/SetUpFreeSurfer.sh' >> $HOME/.bashrc
-RUN echo "source /usr/local/HCPpipelines/Examples/Scripts/SetUpHCPPipeline.sh" >> $HOME/.bashrc
+RUN echo "export FREESURFER_HOME=/usr/local/freesurfer" >> $HOME/.bashrc && \
+    echo 'source $FREESURFER_HOME/SetUpFreeSurfer.sh' >> $HOME/.bashrc && \
+    echo "source /usr/local/HCPpipelines/Examples/Scripts/SetUpHCPPipeline.sh" >> $HOME/.bashrc
 
 VOLUME ["/data"]
 WORKDIR /data
